@@ -1,0 +1,197 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert' as convert;
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+        title: 'Flutter Demo',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        home: const Contact(
+            title: "Contact",
+            customerFontFamily: "SF Pro Display",
+            customerFontStyle: FontStyle.normal));
+  }
+}
+
+class Contact extends StatefulWidget {
+  const Contact(
+      {Key? key,
+      required this.title,
+      required this.customerFontFamily,
+      required this.customerFontStyle})
+      : super(key: key);
+
+  final String title;
+  final String customerFontFamily;
+  final FontStyle customerFontStyle;
+
+  @override
+  State<Contact> createState() => _ContactState();
+}
+
+Future<List<dynamic>> contactData() async {
+  String endPoint = "https://mocki.io/v1/49698a5a-61eb-4ac8-9d40-cf93c6aa1923";
+  var response = await http
+      .get(Uri.parse(endPoint), headers: {'Content-Type': 'application/json'});
+  String data = convert.utf8.decode(response.bodyBytes);
+  List<dynamic> decodedData = convert.jsonDecode(data);
+
+  return decodedData;
+}
+
+TextStyle customerTextStyle(double fontSize, String fontFamily,
+    FontStyle fontStyle, FontWeight fontWeight, Color textColor) {
+  return TextStyle(
+      fontSize: fontSize,
+      fontFamily: fontFamily,
+      fontStyle: fontStyle,
+      fontWeight: fontWeight,
+      color: textColor);
+}
+
+Future<List<Widget>> contactWidgetsFilledData(
+    String textFontFamily, FontStyle textFontStyle) async {
+  List<dynamic> customerData = await contactData();
+  List<Widget> contactPlaces = <Widget>[];
+
+  for (var i = 0; i < customerData.length; ++i) {
+    var customer = customerData[i];
+    String customerName = customer["name"];
+    String customerImage = customer["avatar"];
+    dynamic customerAge;
+    String customerCity = "";
+
+    if ("" == customer["city"]) {
+      customerCity = "undefined";
+    } else {
+      customerCity = customer["city"];
+    }
+
+    if (null == customer["age"] || 0 == customer["age"]) {
+      customerAge = "No Information";
+    } else {
+      customerAge = customer["age"];
+    }
+    Widget contactPlace = Container(
+        child: Row(children: <Widget>[
+          Container(
+              width: 43,
+              height: 43,
+              decoration: BoxDecoration(
+                  image: DecorationImage(
+                      fit: BoxFit.fill, image: NetworkImage(customerImage)),
+                  borderRadius: BorderRadius.circular(43))),
+          const SizedBox(width: 17),
+          Expanded(
+              child: Column(children: <Widget>[
+            Row(children: <Widget>[
+              Text(customerName,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontStyle: textFontStyle,
+                      fontFamily: textFontFamily,
+                      fontWeight: FontWeight.w500)),
+              const Expanded(child: SizedBox()),
+              Text('$customerAge',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: const Color(0xFF79767D),
+                      fontStyle: textFontStyle,
+                      fontFamily: textFontFamily,
+                      fontWeight: FontWeight.w400))
+            ]),
+            const SizedBox(height: 5),
+            Row(children: <Widget>[
+              Text(customerCity,
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: const Color(0xFF79767D),
+                      fontStyle: textFontStyle,
+                      fontFamily: textFontFamily,
+                      fontWeight: FontWeight.w400))
+            ])
+          ]))
+        ]),
+        margin: const EdgeInsets.only(bottom: 29.5, top: 0));
+
+    contactPlaces.add(contactPlace);
+  }
+  return contactPlaces;
+}
+
+class _ContactState extends State<Contact> {
+  var _contactWidgets = <Widget>[];
+
+  @override
+  void initState() {
+    super.initState();
+
+    getData();
+  }
+
+  void getData() async {
+    List<Widget> contactWidgets = await contactWidgetsFilledData(
+        widget.customerFontFamily, widget.customerFontStyle);
+
+    setState(() {
+      _contactWidgets = contactWidgets;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+            title: Text(widget.title,
+                style: TextStyle(
+                    fontFamily: widget.customerFontFamily,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontStyle: widget.customerFontStyle)),
+            leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_rounded, size: 19),
+                onPressed: () => {}),
+            centerTitle: true,
+            systemOverlayStyle:
+                const SystemUiOverlayStyle(statusBarColor: Color(0xFF1E1F1F)),
+            backgroundColor: Colors.transparent,
+            elevation: 0.0),
+        body: Container(
+            child: Column(children: <Widget>[
+              Container(
+                  child: Column(children: <Widget>[
+                    Padding(
+                        padding:
+                            const EdgeInsets.only(top: 32, right: 20, left: 24),
+                        child: Text("Contacts",
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontStyle: widget.customerFontStyle,
+                                fontFamily: widget.customerFontFamily,
+                                fontWeight: FontWeight.w400))),
+                    Padding(
+                        padding: const EdgeInsets.only(
+                            top: 33, right: 20, left: 18, bottom: 0),
+                        child: Column(children: _contactWidgets))
+                  ], crossAxisAlignment: CrossAxisAlignment.start),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF282729),
+                      borderRadius: BorderRadius.circular(15)),
+                  margin: const EdgeInsets.only(top: 14))
+            ]),
+            decoration: const BoxDecoration(color: Colors.transparent)),
+        backgroundColor: const Color(0xFF1E1F1F));
+  }
+}
